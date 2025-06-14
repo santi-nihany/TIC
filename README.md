@@ -22,6 +22,12 @@ Este proyecto implementa la simulación de un sistema de comunicación digital s
 
 - Calcular y analizar la ganancia de codificación.
 
+Como correrlo:
+
+```bash
+python ej1/main.py
+```
+
 ### Compresión
 
 Se realiza la compresión de un archivo de imagen binaria mediante la construcción de árboles de Huffman para fuentes extendidas de orden 2 y 3.
