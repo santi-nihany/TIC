@@ -1,52 +1,56 @@
 import os
+import math
+import pandas as pd
 from proc_imagen import procesar_imagen
 from huffman import extender_fuente, huffman, codificar
-import math
 
 
 def main():
     path = os.path.join(os.path.dirname(__file__), "logo_FI.tif")
+    resultados = []
 
-    # Procesar imagen
-    n = 3
-    # Generar simbolos de 3 bits
-    simbolos = [f"{i:0{n}b}" for i in range(2**n)]
-    # Procesar imagen y obtener probabilidades de cada simbolo
-    probabilidades = procesar_imagen(path, simbolos)
+    for n in range(1, 4):  # n = 1, 2, 3
+        # Fuente original simbolos largo n
+        simbolos = [f"{i:0{n}b}" for i in range(2**n)]
+        probabilidades = procesar_imagen(path, simbolos)
+        print(f"\nFuente original (longitud de símbolo n = {n} bits):")
+        print("Probabilidades de símbolos originales:")
+        for s, p in zip(simbolos, probabilidades):
+            print(f"  {s}: {p:.6f}")
 
-    print(">>> Fuente original:")
-    for s, p in zip(simbolos, probabilidades):
-        print(f"  {s}: {p:.4f}")
+        for orden in (2, 3):
+            # Extensión de fuente
+            simbolos_ext, probabilidades_ext = extender_fuente(
+                simbolos, probabilidades, orden)
+            arbol = huffman(simbolos_ext, probabilidades_ext)
+            codigos = codificar(arbol)
+            prob_dict = dict(zip(simbolos_ext, probabilidades_ext))
 
-    # Extender fuente orden 2
-    simbolos_ext_2, probabilidades_ext_2 = extender_fuente(
-        simbolos, probabilidades, 2)
+            # Cálculos
+            entropia = -sum(p * math.log2(p)
+                            for p in probabilidades_ext if p > 0)
+            largo_promedio = sum(
+                prob_dict[s] * len(codigos[s]) for s in codigos)
+            tasa_compresion = (orden * n) / \
+                largo_promedio if largo_promedio > 0 else 0
 
-    print(">>> Fuente extendida (orden 2):")
-    for s, p in zip(simbolos_ext_2, probabilidades_ext_2):
-        print(f"  {s} → {p:.4f}")
+            resultados.append({
+                "n": n,
+                "Orden": orden,
+                "Largo promedio (bits)": largo_promedio,
+                "Entropía (bits/símbolo)": entropia,
+                "Tasa compresión": tasa_compresion
+            })
 
-    # Codificar fuente extendida de orden 2
-    arbol_ext2 = huffman(simbolos_ext_2, probabilidades_ext_2)
-    print(arbol_ext2)
-    codigos_ext2 = codificar(arbol_ext2)
+            print(f"=== Fuente extendida orden {orden} ===")
+            print(f"Largo promedio (bits): {largo_promedio:.6f}")
+            print(f"Entropía (bits/símbolo): {entropia:.6f}")
+            print(f"Tasa de compresión: {tasa_compresion:.6f}")
 
-    # Crear diccionario de probabilidades para los símbolos extendidos
-    prob_dict = dict(zip(simbolos_ext_2, probabilidades_ext_2))
-
-    # Calcular largo promedio
-    largo_promedio = sum(
-        prob_dict[s] * len(codigos_ext2[s]) for s in codigos_ext2)
-    # Entropía
-    entropia = -sum(
-        prob_dict[s] * math.log2(prob_dict[s]) for s in codigos_ext2 if prob_dict[s] > 0)
-
-    print(f"Largo promedio: {largo_promedio}")
-    print(f"Entropía: {entropia}")
-
-    print(">>> Codigos extendida (orden 2):")
-    for s, c in codigos_ext2.items():
-        print(f"  {s}: {c} {len(c), prob_dict[s]}")
+    # Resultados .csv
+    df = pd.DataFrame(resultados)
+    csv_path = os.path.join(os.path.dirname(__file__), "resultados.csv")
+    df.to_csv(csv_path, index=False, float_format="%.6f")
 
 
 if __name__ == "__main__":
